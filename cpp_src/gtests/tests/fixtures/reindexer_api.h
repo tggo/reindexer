@@ -39,6 +39,7 @@ public:
 	void DefineNamespaceDataset(const string &ns, std::initializer_list<const IndexDeclaration> fields) {
 		rt.DefineNamespaceDataset(ns, fields);
 	}
+	Error RegisterQueryResultsInNs(reindexer::string_view ns, reindexer::QueryResults &qr) { return rt.RegisterQueryResultsInNs(ns, qr); }
 	Item NewItem(const std::string &ns) { return rt.NewItem(ns); }
 
 	Error Commit(const std::string &ns) { return rt.Commit(ns); }

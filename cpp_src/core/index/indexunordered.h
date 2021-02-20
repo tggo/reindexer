@@ -24,7 +24,7 @@ public:
 							   const RdxContext &) override;
 	void Commit() override;
 	void UpdateSortedIds(const UpdateSortedContext &) override;
-	Index *Clone() override;
+	std::unique_ptr<Index> Clone() override;
 	IndexMemStat GetMemStat() override;
 	size_t Size() const override final { return idx_map.size(); }
 	void SetSortedIdxCount(int sortedIdxCount) override;
@@ -47,6 +47,6 @@ protected:
 
 constexpr inline unsigned maxSelectivityPercentForIdset() noexcept { return 25u; }
 
-Index *IndexUnordered_New(const IndexDef &idef, const PayloadType payloadType, const FieldsSet &fields);
+std::unique_ptr<Index> IndexUnordered_New(const IndexDef &idef, const PayloadType payloadType, const FieldsSet &fields);
 
 }  // namespace reindexer

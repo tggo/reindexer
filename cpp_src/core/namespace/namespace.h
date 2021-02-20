@@ -37,16 +37,14 @@ public:
 		nsFuncWrapper<void (NamespaceImpl::*)(Item &, const NsContext &), &NamespaceImpl::Update>(item, ctx);
 	}
 	void Update(const Query &query, QueryResults &result, const NsContext &ctx) {
-		nsFuncWrapper<void (NamespaceImpl::*)(const Query &, QueryResults &, const NsContext &ctx), &NamespaceImpl::Update>(query, result,
-																															ctx);
+		nsFuncWrapper<&NamespaceImpl::Update>(query, result, ctx);
 	}
 	void Upsert(Item &item, const NsContext &ctx) { handleInvalidation(NamespaceImpl::Upsert)(item, ctx); }
 	void Delete(Item &item, const NsContext &ctx) {
 		nsFuncWrapper<void (NamespaceImpl::*)(Item &, const NsContext &), &NamespaceImpl::Delete>(item, ctx);
 	}
 	void Delete(const Query &query, QueryResults &result, const NsContext &ctx) {
-		nsFuncWrapper<void (NamespaceImpl::*)(const Query &, QueryResults &, const NsContext &), &NamespaceImpl::Delete>(query, result,
-																														 ctx);
+		nsFuncWrapper<&NamespaceImpl::Delete>(query, result, ctx);
 	}
 	void Truncate(const NsContext &ctx) { handleInvalidation(NamespaceImpl::Truncate)(ctx); }
 	void Select(QueryResults &result, SelectCtx &params, const RdxContext &ctx) {
@@ -119,6 +117,7 @@ public:
 	}
 	StorageOpts GetStorageOpts(const RdxContext &ctx) { return handleInvalidation(NamespaceImpl::GetStorageOpts)(ctx); }
 	void Refill(vector<Item> &items, const NsContext &ctx) { handleInvalidation(NamespaceImpl::Refill)(items, ctx); }
+	void RegisterQueryResults(QueryResults &qr) { qr.AddNamespace(ns_); }
 
 protected:
 	friend class ReindexerImpl;
@@ -145,6 +144,27 @@ private:
 				if (e.code() != errNamespaceInvalidated) {
 					throw;
 				} else {
+					std::this_thread::yield();
+				}
+			}
+		}
+	}
+
+	template <void (NamespaceImpl::*fn)(const Query &, QueryResults &, const NsContext &)>
+	void nsFuncWrapper(const Query &q, QueryResults &qr, const NsContext &ctx) const {
+		while (true) {
+			std::shared_ptr<NamespaceImpl> ns;
+			bool added = false;
+			try {
+				ns = atomicLoadMainNs();
+				qr.AddNamespace(ns);
+				added = true;
+				return (*ns.*fn)(q, qr, ctx);
+			} catch (const Error &e) {
+				if (e.code() != errNamespaceInvalidated) {
+					throw;
+				} else {
+					if (added) qr.RemoveNamespace(ns.get());
 					std::this_thread::yield();
 				}
 			}

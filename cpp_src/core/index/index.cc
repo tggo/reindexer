@@ -27,9 +27,7 @@ Index::Index(const Index& obj)
 	  selectKeyType_(obj.selectKeyType_),
 	  sortedIdxCount_(obj.sortedIdxCount_) {}
 
-Index::~Index() {}
-
-Index* Index::New(const IndexDef& idef, const PayloadType payloadType, const FieldsSet& fields) {
+std::unique_ptr<Index> Index::New(const IndexDef& idef, const PayloadType payloadType, const FieldsSet& fields) {
 	switch (idef.Type()) {
 		case IndexStrBTree:
 		case IndexIntBTree:

@@ -58,6 +58,12 @@ public:
 		deep_clean(*pos);
 		return base_hash_map::erase(pos);
 	}
+
+	template <typename deep_cleaner>
+	iterator erase(iterator pos, const deep_cleaner& deep_clean) {
+		deep_clean(*pos);
+		return base_hash_map::erase(pos);
+	}
 };
 
 template <typename T1>
@@ -72,6 +78,11 @@ public:
 	template <typename deep_cleaner>
 	iterator erase(const iterator& pos) {
 		static const deep_cleaner deep_clean;
+		deep_clean(*pos);
+		return base_tree_map::erase(pos);
+	}
+	template <typename deep_cleaner>
+	iterator erase(const iterator& pos, const deep_cleaner& deep_clean) {
 		deep_clean(*pos);
 		return base_tree_map::erase(pos);
 	}
@@ -110,6 +121,11 @@ public:
 		deep_clean(*pos);
 		return base_hash_map::erase(pos);
 	}
+	template <typename deep_cleaner>
+	iterator erase(iterator pos, const deep_cleaner& deep_clean) {	// TODO remove this in c++17
+		deep_clean(*pos);
+		return base_hash_map::erase(pos);
+	}
 };
 
 template <typename K, typename T1>
@@ -124,6 +140,11 @@ public:
 	template <typename deep_cleaner>
 	iterator erase(const iterator& pos) {
 		static const deep_cleaner deep_clean;
+		deep_clean(*pos);
+		return base_tree_map::erase(pos);
+	}
+	template <typename deep_cleaner>
+	iterator erase(const iterator& pos, const deep_cleaner& deep_clean) {  // TODO remove this in c++17
 		deep_clean(*pos);
 		return base_tree_map::erase(pos);
 	}

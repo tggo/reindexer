@@ -359,11 +359,8 @@ Error ReindexerImpl::closeNamespace(string_view nsName, const RdxContext& ctx, b
 		}
 
 	} catch (const Error& err) {
-		ns.reset();
 		return err;
 	}
-	// Here will called destructor
-	ns.reset();
 	return errOK;
 }
 
@@ -567,6 +564,19 @@ Error ReindexerImpl::Upsert(string_view nsName, Item& item, const InternalRdxCon
 	}
 	if (ctx.Compl()) ctx.Compl()(err);
 	return err;
+}
+
+Error ReindexerImpl::RegisterQueryResults(string_view nsName, QueryResults& qr, const InternalRdxContext& ctx) {
+	try {
+		WrSerializer ser;
+		const auto rdxCtx =
+			ctx.CreateRdxContext(ctx.NeedTraceActivity() ? (ser << "REGISTER QUERYRESULTS FOR " << nsName).Slice() : ""_sv, activities_);
+		auto ns = getNamespace(nsName, rdxCtx);
+		ns->RegisterQueryResults(qr);
+	} catch (const Error& err) {
+		return err;
+	}
+	return {};
 }
 
 Item ReindexerImpl::NewItem(string_view nsName, const InternalRdxContext& ctx) {
@@ -883,6 +893,7 @@ JoinedSelectors ReindexerImpl::prepareJoinedSelectors(const Query& q, QueryResul
 		queryResultsContexts.emplace_back(jns->payloadType_, jns->tagsMatcher_, FieldsSet(jns->tagsMatcher_, jq.selectFilter_),
 										  jns->schema_);
 
+		result.AddNamespace(jns);
 		if (preResult->dataMode == JoinPreResult::ModeValues) {
 			jItemQ.entries.ForEachEntry([&jns](QueryEntry& qe) {
 				if (jns->indexes_[qe.idxNo]->Opts().IsSparse()) qe.idxNo = IndexValueType::SetByJsonPath;
@@ -917,6 +928,7 @@ void ReindexerImpl::doSelect(const Query& q, QueryResults& result, NsLocker<T>& 
 		selCtx.nsid = 0;
 		selCtx.isForceAll = !q.mergeQueries_.empty();
 		ns->Select(result, selCtx, ctx);
+		result.AddNamespace(ns);
 	}
 
 	// should be destroyed after results.lockResults()
@@ -937,6 +949,7 @@ void ReindexerImpl::doSelect(const Query& q, QueryResults& result, NsLocker<T>& 
 			mctx.joinedSelectors = mergeJoinedSelectors.back().size() ? &mergeJoinedSelectors.back() : nullptr;
 
 			mns->Select(result, mctx, ctx);
+			result.AddNamespace(mns);
 		}
 
 		ItemRefVector& itemRefVec = result.Items();
@@ -968,7 +981,6 @@ void ReindexerImpl::doSelect(const Query& q, QueryResults& result, NsLocker<T>& 
 	}
 	// Adding context to QueryResults
 	for (const auto& jctx : joinQueryResultsContexts) result.addNSContext(jctx.type_, jctx.tagsMatcher_, jctx.fieldsFilter_, jctx.schema_);
-	result.lockResults();
 }
 
 template void ReindexerImpl::doSelect(const Query&, QueryResults&, NsLocker<RdxContext>&, SelectFunctionsHolder&, const RdxContext&);
@@ -1111,7 +1123,7 @@ Error ReindexerImpl::EnumNamespaces(vector<NamespaceDef>& defs, EnumNamespacesOp
 						SLock lock(mtx_, &rdxCtx);
 						if (namespaces_.find(d.name) != namespaces_.end()) continue;
 					}
-					unique_ptr<NamespaceImpl> tmpNs(new NamespaceImpl(d.name, observers_));
+					std::unique_ptr<NamespaceImpl> tmpNs{new NamespaceImpl(d.name, observers_)};
 					try {
 						tmpNs->EnableStorage(storagePath_, StorageOpts(), storageType_, rdxCtx);
 						defs.push_back(tmpNs->GetDefinition(rdxCtx));

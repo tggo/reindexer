@@ -27,13 +27,6 @@
 
 namespace reindexer {
 
-using std::pair;
-using std::shared_ptr;
-using std::string;
-using std::unique_lock;
-using std::unique_ptr;
-using std::vector;
-
 using reindexer::datastorage::StorageType;
 
 class Index;
@@ -48,10 +41,11 @@ class RdxContext;
 class RdxActivityContext;
 class ItemComparator;
 class SortExpression;
+class ProtobufSchema;
+class QueryResults;
 namespace SortExprFuncs {
 struct DistanceBetweenJoinedIndexesSameNs;
 }  // namespace SortExprFuncs
-class ProtobufSchema;
 
 struct NsContext {
 	NsContext(const RdxContext &rdxCtx) : rdxContext(rdxCtx) {}
@@ -82,6 +76,7 @@ protected:
 	friend SortExpression;
 	friend SortExprFuncs::DistanceBetweenJoinedIndexesSameNs;
 	friend class ReindexerImpl;
+	friend QueryResults;
 
 	class NSUpdateSortedContext : public UpdateSortedContext {
 	public:
@@ -103,9 +98,9 @@ protected:
 		vector<SortType> ids2Sorts_;
 	};
 
-	class IndexesStorage : public vector<unique_ptr<Index>> {
+	class IndexesStorage : public std::vector<std::unique_ptr<Index>> {
 	public:
-		using Base = vector<unique_ptr<Index>>;
+		using Base = std::vector<std::unique_ptr<Index>>;
 
 		IndexesStorage(const NamespaceImpl &ns);
 
@@ -236,8 +231,8 @@ protected:
 			}
 			return lck;
 		}
-		unique_lock<std::mutex> StorageLock() const {
-			unique_lock<std::mutex> lck(storage_mtx_);
+		std::unique_lock<std::mutex> StorageLock() const {
+			std::unique_lock<std::mutex> lck(storage_mtx_);
 			if (readonly_.load(std::memory_order_acquire)) {
 				throw Error(errNamespaceInvalidated, "NS invalidated"_sv);
 			}
@@ -276,7 +271,7 @@ protected:
 	void updateItems(PayloadType oldPlType, const FieldsSet &changedFields, int deltaFields);
 	void doDelete(IdType id);
 	void optimizeIndexes(const NsContext &);
-	void insertIndex(Index *newIndex, int idxNo, const string &realName);
+	void insertIndex(std::unique_ptr<Index> newIndex, int idxNo, const string &realName);
 	void addIndex(const IndexDef &indexDef);
 	void addCompositeIndex(const IndexDef &indexDef);
 	void verifyUpdateIndex(const IndexDef &indexDef) const;
@@ -287,6 +282,7 @@ protected:
 	void addToWAL(string_view json, WALRecType type, const RdxContext &ctx);
 	VariantArray preprocessUpdateFieldValues(const UpdateEntry &updateEntry, IdType itemId);
 	void removeExpiredItems(RdxActivityContext *);
+	void removeExpiredStrings(RdxActivityContext *);
 
 	void recreateCompositeIndexes(int startIdx, int endIdx);
 	NamespaceDef getDefinition() const;
@@ -393,6 +389,8 @@ private:
 	size_t itemsDataSize_ = 0;
 
 	std::atomic<int> optimizationState_ = {OptimizationState::NotOptimized};
+	std::atomic<unsigned> queryResultsCounter_{0};
+	std::vector<std::unique_ptr<Index>> expiredIndexes_;
 };
 
 }  // namespace reindexer

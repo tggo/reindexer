@@ -612,6 +612,10 @@ public:
 	void erase(typename Base::iterator it) {
 		Base::erase(it);
 	}
+	template <typename deep_cleaner>
+	void erase(typename Base::iterator it, const deep_cleaner&) {  // TODO remove this in c++17
+		Base::erase(it);
+	}
 };
 
 }  // namespace reindexer

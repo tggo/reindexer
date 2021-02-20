@@ -50,6 +50,9 @@ public:
 		ASSERT_TRUE(err.ok()) << err.what();
 	}
 
+	reindexer::Error RegisterQueryResultsInNs(reindexer::string_view ns, reindexer::QueryResults &qr) {
+		return reindexer->RegisterQueryResults(ns, qr);
+	}
 	ItemType NewItem(const std::string &ns) { return reindexer->NewItem(ns); }
 	reindexer::Error Commit(const std::string &ns) { return reindexer->Commit(ns); }
 	void Upsert(const std::string &ns, ItemType &item) {

@@ -499,7 +499,7 @@ void NsSelecter::setLimitAndOffset(ItemRefVector &queryResult, size_t offset, si
 	}
 }
 
-void NsSelecter::processLeftJoins(QueryResults &qr, SelectCtx &sctx, size_t startPos, const RdxContext& rdxCtx) {
+void NsSelecter::processLeftJoins(QueryResults &qr, SelectCtx &sctx, size_t startPos, const RdxContext &rdxCtx) {
 	if (!checkIfThereAreLeftJoins(sctx)) return;
 	for (size_t i = startPos; i < qr.Count(); ++i) {
 		IdType rowid = qr[i].GetItemRef().Id();
@@ -752,7 +752,7 @@ void NsSelecter::addSelectResult(uint8_t proc, IdType rowId, IdType properRowId,
 					exprs[i].Calculate(rowId, pv, result.joined_[sctx.nsid], joinedSelectors, proc, ns_->tagsMatcher_));
 			}
 		}
-		result.Add({properRowId, exprResultIdx, proc, sctx.nsid}, ns_->payloadType_);
+		result.Add({properRowId, exprResultIdx, proc, sctx.nsid});
 
 		const int kLimitItems = 10000000;
 		size_t sz = result.Count();

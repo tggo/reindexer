@@ -466,6 +466,13 @@ Error RPCServer::ModifyItem(cproto::Context &ctx, p_string ns, int format, p_str
 		item.SetPrecepts(precepts);
 		if (preceptsCount) sendItemBack = true;
 	}
+	QueryResults qres;
+	if (sendItemBack) {
+		err = db.WithTimeout(execTimeout).RegisterQueryResults(ns, qres);
+		if (!err.ok()) {
+			return err;
+		}
+	}
 	switch (mode) {
 		case ModeUpsert:
 			err = db.WithTimeout(execTimeout).Upsert(ns, item);
@@ -483,7 +490,6 @@ Error RPCServer::ModifyItem(cproto::Context &ctx, p_string ns, int format, p_str
 	if (!err.ok()) {
 		return err;
 	}
-	QueryResults qres;
 	qres.AddItem(item, sendItemBack);
 	int32_t ptVers = -1;
 	ResultFetchOpts opts;

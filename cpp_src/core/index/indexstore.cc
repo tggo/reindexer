@@ -7,15 +7,42 @@
 namespace reindexer {
 
 template <>
+IndexStore<key_string>::IndexStore(const IndexStore &other)
+	: Index{other}, str_map{other.str_map}, idx_data{other.idx_data}, memStat_{other.memStat_} {}
+
+template <typename T>
+IndexStore<T>::IndexStore(const IndexStore &) = default;
+
+template <>
+IndexStore<key_string>::IndexStore(IndexStore &&other)
+	: Index{std::move(other)},
+	  str_map{std::move(other.str_map)},
+	  idx_data{std::move(other.idx_data)},
+	  memStat_{std::move(other.memStat_)},
+	  expiredStrings_{std::move(other.expiredStrings_)},
+	  expiredStringsMemStat_{other.expiredStringsMemStat_} {
+	other.expiredStringsMemStat_ = 0;
+}
+
+template <typename T>
+IndexStore<T>::IndexStore(IndexStore &&) = default;
+
+template <>
 IndexStore<Point>::IndexStore(const IndexDef &idef, const PayloadType payloadType, const FieldsSet &fields)
 	: Index(idef, payloadType, fields) {
 	keyType_ = selectKeyType_ = KeyValueDouble;
 	opts_.Array(true);
 }
 
-struct StrDeepClean {
-	void operator()(unordered_str_map<int>::value_type &v) const { v.first = key_string(); }
-};
+template <>
+void IndexStore<key_string>::RemoveExpiredStrings() {
+	memStat_.dataSize -= sizeof(vector<key_string>::value_type) * expiredStrings_.size() + expiredStringsMemStat_;
+	expiredStringsMemStat_ = 0;
+	expiredStrings_.clear();
+}
+
+template <typename T>
+void IndexStore<T>::RemoveExpiredStrings() {}
 
 template <>
 void IndexStore<key_string>::Delete(const Variant &key, IdType id) {
@@ -25,8 +52,11 @@ void IndexStore<key_string>::Delete(const Variant &key, IdType id) {
 	if (keyIt == str_map.end()) return;
 	if (keyIt->second) keyIt->second--;
 	if (!keyIt->second) {
-		memStat_.dataSize -= sizeof(unordered_str_map<int>::value_type) + sizeof(*keyIt->first.get()) + keyIt->first->heap_size();
-		str_map.template erase<StrDeepClean>(keyIt);
+		memStat_.dataSize -= sizeof(unordered_str_map<int>::value_type);
+		memStat_.dataSize += sizeof(vector<key_string>::value_type);
+		expiredStringsMemStat_ += sizeof(*keyIt->first.get()) + keyIt->first->heap_size();
+		expiredStrings_.emplace_back(std::move(keyIt->first));
+		str_map.template erase<no_deep_clean>(keyIt);
 	}
 
 	(void)id;
@@ -115,8 +145,10 @@ SelectKeyResults IndexStore<T>::SelectKey(const VariantArray &keys, CondType con
 }
 
 template <typename T>
-Index *IndexStore<T>::Clone() {
-	return new IndexStore<T>(*this);
+std::unique_ptr<Index> IndexStore<T>::Clone() {
+	std::unique_ptr<Index> ret{new IndexStore<T>(*this)};
+	std::swap(static_cast<IndexStore *>(ret.get())->expiredStrings_, this->expiredStrings_);
+	return ret;
 }
 
 template <typename T>
@@ -128,23 +160,28 @@ IndexMemStat IndexStore<T>::GetMemStat() {
 	return ret;
 }
 
-Index *IndexStore_New(const IndexDef &idef, const PayloadType payloadType, const FieldsSet &fields) {
+std::unique_ptr<Index> IndexStore_New(const IndexDef &idef, const PayloadType payloadType, const FieldsSet &fields) {
 	switch (idef.Type()) {
 		case IndexBool:
-			return new IndexStore<bool>(idef, payloadType, fields);
+			return std::unique_ptr<Index>{new IndexStore<bool>(idef, payloadType, fields)};
 		case IndexIntStore:
-			return new IndexStore<int>(idef, payloadType, fields);
+			return std::unique_ptr<Index>{new IndexStore<int>(idef, payloadType, fields)};
 		case IndexInt64Store:
-			return new IndexStore<int64_t>(idef, payloadType, fields);
+			return std::unique_ptr<Index>{new IndexStore<int64_t>(idef, payloadType, fields)};
 		case IndexDoubleStore:
-			return new IndexStore<double>(idef, payloadType, fields);
+			return std::unique_ptr<Index>{new IndexStore<double>(idef, payloadType, fields)};
 		case IndexStrStore:
-			return new IndexStore<key_string>(idef, payloadType, fields);
+			return std::unique_ptr<Index>{new IndexStore<key_string>(idef, payloadType, fields)};
 		default:
 			abort();
 	}
 }
 
+template class IndexStore<bool>;
+template class IndexStore<int>;
+template class IndexStore<int64_t>;
+template class IndexStore<double>;
+template class IndexStore<key_string>;
 template class IndexStore<PayloadValue>;
 template class IndexStore<Point>;
 

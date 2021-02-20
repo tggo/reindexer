@@ -74,6 +74,10 @@ public:
 	/// Delete all items from namespace
 	/// @param nsName - Name of namespace
 	Error TruncateNamespace(string_view nsName);
+	/// Register QueryResults in namespace
+	/// @param nsName - Name of namespace
+	/// @param qr - queryResults to register
+	Error RegisterQueryResults(string_view nsName, QueryResults &qr);
 	/// Rename namespace. If namespace with dstNsName exists, then it is replaced.
 	/// @param srcNsName  - Name of namespace
 	/// @param dstNsName  - desired name of namespace

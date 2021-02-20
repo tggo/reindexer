@@ -9,14 +9,14 @@
 
 namespace reindexer {
 
-using std::string;
-
 class Schema;
 class TagsMatcher;
 class PayloadType;
 class WrSerializer;
 struct NsContext;
 struct ResultFetchOpts;
+class SelectFunctionsHolder;
+class NamespaceImpl;
 
 namespace joins {
 class NamespaceResults;
@@ -38,9 +38,8 @@ public:
 	~QueryResults();
 	QueryResults &operator=(const QueryResults &) = delete;
 	QueryResults &operator=(QueryResults &&obj) noexcept;
-	void Add(const ItemRef &i);
-	void Add(const ItemRef &itemref, const PayloadType &pt);
-	void AddItem(Item &item, bool withData = false, bool singleValue = true);
+	void Add(const ItemRef &);
+	void AddItem(Item &item, bool withData = false);
 	void Dump() const;
 	void Erase(ItemRefVector::iterator begin, ItemRefVector::iterator end);
 	size_t Count() const { return items_.size(); }
@@ -107,10 +106,15 @@ public:
 	std::shared_ptr<const Schema> getSchema(int nsid) const;
 	int getNsNumber(int nsid) const;
 	int getMergedNSCount() const;
-	void lockResults();
 	ItemRefVector &Items() { return items_; }
 	const ItemRefVector &Items() const { return items_; }
 	int GetJoinedNsCtxIndex(int nsid) const;
+	void AddNamespace(std::shared_ptr<NamespaceImpl> ns);
+	void RemoveNamespace(const NamespaceImpl *ns);
+	bool IsNamespaceAdded(const NamespaceImpl *ns) const noexcept {
+		return std::find_if(namespaces_.cbegin(), namespaces_.cend(),
+							[ns](const std::shared_ptr<NamespaceImpl> &ptr) { return ptr.get() == ns; }) != namespaces_.cend();
+	}
 
 	string explainResults;
 
@@ -119,11 +123,7 @@ protected:
 	class EncoderAdditionalDatasource;
 
 private:
-	void lockResults(bool lock);
-	void unlockResults();
-	void lockItem(ItemRef &itemref, size_t joinedNs, bool lock);
 	void encodeJSON(int idx, WrSerializer &ser) const;
-	bool lockedResults_ = false;
 	ItemRefVector items_;
 	bool holdActivity_ = false;
 	union {
@@ -131,6 +131,9 @@ private:
 		RdxActivityContext activityCtx_;
 	};
 	friend InternalRdxContext;
+	friend SelectFunctionsHolder;
+	h_vector<std::shared_ptr<NamespaceImpl>, 1> namespaces_;
+	vector<key_string> stringsHolder_;
 };
 
 }  // namespace reindexer

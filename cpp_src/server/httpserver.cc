@@ -1002,6 +1002,8 @@ int HTTPServer::modifyItemsMsgPack(http::Context &ctx, string &nsName, const vec
 	int totalItems = 0;
 
 	auto db = getDB(ctx, kRoleDataWrite);
+	Error err = db.RegisterQueryResults(nsName, qr);
+	if (!err.ok()) return msgpackStatus(ctx, http::HttpStatus(err));
 	string sbuffer = ctx.body->Read();
 
 	size_t length = sbuffer.size();
@@ -1019,12 +1021,10 @@ int HTTPServer::modifyItemsMsgPack(http::Context &ctx, string &nsName, const vec
 		if (!status.ok()) return msgpackStatus(ctx, http::HttpStatus(status));
 
 		if (item.GetID() != -1) {
-			if (!precepts.empty()) qr.AddItem(item, true, false);
+			if (!precepts.empty()) qr.AddItem(item, true);
 			++totalItems;
 		}
 	}
-
-	qr.lockResults();
 
 	WrSerializer wrSer(ctx.writer->GetChunk());
 	MsgPackBuilder msgpackBuilder(wrSer, ObjType::TypeObject, precepts.empty() ? 2 : 3);

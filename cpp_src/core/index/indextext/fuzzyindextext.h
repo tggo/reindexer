@@ -20,7 +20,7 @@ public:
 		CreateConfig();
 	}
 
-	Index* Clone() override;
+	std::unique_ptr<Index> Clone() override;
 	IdSet::Ptr Select(FtCtx::Ptr fctx, FtDSLQuery& dsl) override final;
 	void commitFulltext() override final;
 	Variant Upsert(const Variant& key, IdType id) override final {
@@ -38,9 +38,8 @@ protected:
 
 	SearchEngine engine_;
 	vector<VDocEntry> vdocs_;
+};
 
-};  // namespace reindexer
-
-Index* FuzzyIndexText_New(const IndexDef& idef, const PayloadType payloadType, const FieldsSet& fields);
+std::unique_ptr<Index> FuzzyIndexText_New(const IndexDef& idef, const PayloadType payloadType, const FieldsSet& fields);
 
 }  // namespace reindexer

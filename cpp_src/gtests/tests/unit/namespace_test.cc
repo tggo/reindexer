@@ -1032,6 +1032,8 @@ TEST_F(NsApi, MsgPackEncodingTest) {
 	}
 
 	QueryResults qr;
+	Error err = RegisterQueryResultsInNs(default_namespace, qr);
+	ASSERT_TRUE(err.ok()) << err.what();
 
 	int i = 0;
 	size_t length = wrSer1.Len();
@@ -1049,10 +1051,8 @@ TEST_F(NsApi, MsgPackEncodingTest) {
 		string json(item.GetJSON());
 		ASSERT_TRUE(json == items[i++]);
 
-		qr.AddItem(item, true, false);
+		qr.AddItem(item, true);
 	}
-
-	qr.lockResults();
 
 	reindexer::WrSerializer wrSer3;
 	for (size_t i = 0; i < qr.Count(); ++i) {

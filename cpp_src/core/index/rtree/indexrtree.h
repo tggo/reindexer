@@ -21,9 +21,9 @@ public:
 	using IndexUnordered<Map>::Delete;
 	void Delete(const VariantArray &keys, IdType id) override;
 
-	Index *Clone() override { return new IndexRTree(*this); }
+	std::unique_ptr<Index> Clone() override { return std::unique_ptr<Index>{new IndexRTree(*this)}; }
 };
 
-Index *IndexRTree_New(const IndexDef &idef, const PayloadType &payloadType, const FieldsSet &fields);
+std::unique_ptr<Index> IndexRTree_New(const IndexDef &idef, const PayloadType &payloadType, const FieldsSet &fields);
 
 }  // namespace reindexer

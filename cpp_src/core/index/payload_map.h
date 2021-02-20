@@ -141,6 +141,12 @@ public:
 		deep_clean(*pos);
 		return base_hash_map::erase(pos);
 	}
+	template <typename deep_cleaner>
+	iterator erase(iterator pos, const deep_cleaner &deep_clean) {	// TODO remove this in c++17
+		if (pos != end()) this->release(pos->first);
+		deep_clean(*pos);
+		return base_hash_map::erase(pos);
+	}
 };
 
 template <typename T1, bool hold>
@@ -188,6 +194,12 @@ public:
 	template <typename deep_cleaner>
 	iterator erase(const iterator &pos) {
 		static const deep_cleaner deep_clean;
+		if (pos != end()) this->release(const_cast<PayloadValue &>(pos->first));
+		deep_clean(*pos);
+		return base_tree_map::erase(pos);
+	}
+	template <typename deep_cleaner>
+	iterator erase(const iterator &pos, const deep_cleaner &deep_clean) {  // TODO remove this in c++17
 		if (pos != end()) this->release(const_cast<PayloadValue &>(pos->first));
 		deep_clean(*pos);
 		return base_tree_map::erase(pos);

@@ -17,10 +17,10 @@ public:
 	Variant Upsert(const Variant &key, IdType id) override;
 	void MakeSortOrders(UpdateSortedContext &ctx) override;
 	IndexIterator::Ptr CreateIterator() const override;
-	Index *Clone() override;
+	std::unique_ptr<Index> Clone() override;
 	bool IsOrdered() const override;
 };
 
-Index *IndexOrdered_New(const IndexDef &idef, const PayloadType payloadType, const FieldsSet &fields);
+std::unique_ptr<Index> IndexOrdered_New(const IndexDef &idef, const PayloadType payloadType, const FieldsSet &fields);
 
 }  // namespace reindexer

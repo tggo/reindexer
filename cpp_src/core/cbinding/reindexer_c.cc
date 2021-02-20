@@ -192,6 +192,16 @@ reindexer_ret reindexer_modify_item_packed(uintptr_t rx, reindexer_buffer args, 
 
 		procces_packed_item(item, mode, state_token, data, precepts, format, err);
 
+		const bool needSaveItemValueInQR = !precepts.empty();
+		if (err.ok()) {
+			QueryResultsWrapper* res = new_results();
+			if (!res) {
+				return ret2c(err_too_many_queries, out);
+			}
+			if (needSaveItemValueInQR) {
+				err = rdxKeeper.db().RegisterQueryResults(ns, *res);
+			}
+		}
 		if (err.ok()) {
 			switch (mode) {
 				case ModeUpsert:
@@ -214,7 +224,7 @@ reindexer_ret reindexer_modify_item_packed(uintptr_t rx, reindexer_buffer args, 
 			if (!res) {
 				return ret2c(err_too_many_queries, out);
 			}
-			res->AddItem(item, !precepts.empty());
+			res->AddItem(item, needSaveItemValueInQR);
 			int32_t ptVers = -1;
 			bool tmUpdated = item.IsTagsUpdated();
 			results2c(res, &out, 0, tmUpdated ? &ptVers : nullptr, tmUpdated ? 1 : 0);

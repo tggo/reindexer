@@ -33,6 +33,7 @@ Error Reindexer::Update(string_view nsName, Item& item) { return impl_->Update(n
 Error Reindexer::Upsert(string_view nsName, Item& item) { return impl_->Upsert(nsName, item, ctx_); }
 Error Reindexer::Delete(string_view nsName, Item& item) { return impl_->Delete(nsName, item, ctx_); }
 Item Reindexer::NewItem(string_view nsName) { return impl_->NewItem(nsName, ctx_); }
+Error Reindexer::RegisterQueryResults(string_view nsName, QueryResults& qr) { return impl_->RegisterQueryResults(nsName, qr, ctx_); }
 Transaction Reindexer::NewTransaction(string_view nsName) { return impl_->NewTransaction(nsName, ctx_); }
 Error Reindexer::CommitTransaction(Transaction& tr, QueryResults& result) { return impl_->CommitTransaction(tr, result, ctx_); }
 Error Reindexer::RollBackTransaction(Transaction& tr) { return impl_->RollBackTransaction(tr); }

@@ -18,9 +18,6 @@
 #include "tools/filecontentwatcher.h"
 #include "transaction.h"
 
-using std::shared_ptr;
-using std::string;
-
 namespace reindexer {
 
 class Replicator;
@@ -69,6 +66,7 @@ public:
 	Error Select(const Query &query, QueryResults &result, const InternalRdxContext &ctx = InternalRdxContext());
 	Error Commit(string_view nsName);
 	Item NewItem(string_view nsName, const InternalRdxContext &ctx = InternalRdxContext());
+	Error RegisterQueryResults(string_view nsName, QueryResults &, const InternalRdxContext &ctx = InternalRdxContext());
 
 	Transaction NewTransaction(string_view nsName, const InternalRdxContext &ctx = InternalRdxContext());
 	Error CommitTransaction(Transaction &tr, QueryResults &result, const InternalRdxContext &ctx = InternalRdxContext());
@@ -112,10 +110,10 @@ protected:
 				}
 			}
 
-			emplace_back(ns);
+			emplace_back(std::move(ns));
 			return;
 		}
-		void Delete(NamespaceImpl::Ptr ns) {
+		void Delete(const NamespaceImpl::Ptr &ns) {
 			for (auto it = begin(); it != end(); ++it) {
 				if (it->ns.get() == ns.get()) {
 					if (!--(it->count)) erase(it);
@@ -133,8 +131,9 @@ protected:
 		}
 
 		NamespaceImpl::Ptr Get(const string &name) {
-			for (auto it = begin(); it != end(); it++)
+			for (auto it = begin(); it != end(); it++) {
 				if (iequals(it->ns->name_, name)) return it->ns;
+			}
 			return nullptr;
 		}
 
